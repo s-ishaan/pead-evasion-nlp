@@ -8,7 +8,7 @@ A systematic quantitative research and signal engineering pipeline designed to m
 
 Standard quantitative formulations of Post-Earnings Announcement Drift (PEAD) model asset price adjustments solely as a function of discrete accounting surprises—typically Standardized Unexpected Earnings (SUE) derived from consensus analyst estimates or seasonal random walks. However, accounting disclosures represent only the structured portion of earnings events. The interactive Question-and-Answer (Q&A) portion of corporate earnings calls represents an unscripted, adversarial information exchange between sell-side research analysts and corporate leadership (CEO/CFO), wherein soft qualitative disclosures, forward guidance risks, and unguided operational frictions are probed in real time.
 
-This repository implements **Phase 1 (Core Research & Modeling Engine)** and **Phase 2 (Simulation & Validation Engine)** of an institutional-grade quantitative framework. The engine ingests point-in-time financial fundamentals, daily pricing data, and complete corporate transcripts across the S&P 500 investment universe; segments, tokenizes, and reconstructs multi-turn conversational dialogs; and extracts a multi-dimensional evasiveness factor $\mathcal{E}_{i,t} \in [0, 1]$. Conditioning cross-sectional PEAD return distributions on $\mathcal{E}_{i,t}$ resolves substantial return dispersion unexplained by accounting surprise metrics alone, identifying predictable drift truncation in positive-surprise equities with high managerial obfuscation.
+This repository implements **Phase 1 (Core Research & Modeling Engine)** and **Phase 2 (Simulation & Validation Engine)** of an institutional-grade quantitative framework. The engine ingests point-in-time financial fundamentals, daily pricing data, and complete corporate transcripts across the S&P 500 investment universe; segments, tokenizes, and reconstructs multi-turn conversational dialogs; and extracts a multi-dimensional evasiveness factor $`\mathcal{E}_{i,t} \in [0, 1]`$. Conditioning cross-sectional PEAD return distributions on $`\mathcal{E}_{i,t}`$ resolves substantial return dispersion unexplained by accounting surprise metrics alone, identifying predictable drift truncation in positive-surprise equities with high managerial obfuscation.
 
 ---
 
@@ -16,98 +16,135 @@ This repository implements **Phase 1 (Core Research & Modeling Engine)** and **P
 
 ### 2.1 Classical Accounting Surprise Specification
 
-The primary benchmark for earnings surprise is formulated as Standardized Unexpected Earnings ($\text{SUE}_{i,t}$) for equity $i$ at fiscal quarter $t$:
+The primary benchmark for earnings surprise is formulated as Standardized Unexpected Earnings ($`\text{SUE}_{i,t}`$) for equity $`i`$ at fiscal quarter $`t`$:
 
-$$\text{SUE}_{i,t} = \frac{\text{EPS}_{i,t} - \mathbb{E}_t[\text{EPS}_{i,t}]}{\sigma\left(\text{EPS}_{i,t} - \mathbb{E}_t[\text{EPS}_{i,t}]\right)}$$
+```math
+\text{SUE}_{i,t} = \frac{\text{EPS}_{i,t} - \mathbb{E}_t[\text{EPS}_{i,t}]}{\sigma\left(\text{EPS}_{i,t} - \mathbb{E}_t[\text{EPS}_{i,t}]\right)}
+```
 
-where $\mathbb{E}_t[\text{EPS}_{i,t}]$ is parameterized via either the median pre-announcement I/B/E/S consensus forecast or a seasonal autoregressive drift model:
+where $`\mathbb{E}_t[\text{EPS}_{i,t}]`$ is parameterized via either the median pre-announcement I/B/E/S consensus forecast or a seasonal autoregressive drift model:
 
-$$\mathbb{E}_t[\text{EPS}_{i,t}] = \text{EPS}_{i,t-4} + \delta_{i,t} + \varepsilon_{i,t}$$
+```math
+\mathbb{E}_t[\text{EPS}_{i,t}] = \text{EPS}_{i,t-4} + \delta_{i,t} + \varepsilon_{i,t}
+```
 
-Under semi-strong market efficiency, excess returns following announcement date $\tau = 0$ should immediately reflect $\text{SUE}_{i,t}$. Empirical markets, however, exhibit protracted post-earnings drift over holding horizons $\tau \in [+2, +60]$ trading days.
+Under semi-strong market efficiency, excess returns following announcement date $`\tau = 0`$ should immediately reflect $`\text{SUE}_{i,t}`$. Empirical markets, however, exhibit protracted post-earnings drift over holding horizons $`\tau \in [+2, +60]`$ trading days.
 
 ---
 
 ### 2.2 Multi-Dimensional Evasiveness Factor Formulation
 
-For an earnings conference call associated with firm $i$ at announcement date $t$, the Q&A session comprises an ordered sequence of $K_{i,t}$ question-answer dialogue turns:
+For an earnings conference call associated with firm $`i`$ at announcement date $`t`$, the Q&A session comprises an ordered sequence of $`K_{i,t}`$ question-answer dialogue turns:
 
-$$\mathcal{C}_{i,t} = \left\{ (q_k, a_k) \right\}_{k=1}^{K_{i,t}}$$
+```math
+\mathcal{C}_{i,t} = \left\{ (q_k, a_k) \right\}_{k=1}^{K_{i,t}}
+```
 
-where $q_k$ represents the analyst inquiry (including multi-part probes and follow-ups) and $a_k$ represents the consolidated managerial response.
+where $`q_k`$ represents the analyst inquiry (including multi-part probes and follow-ups) and $`a_k`$ represents the consolidated managerial response.
 
-For each pair $k$, a composite evasiveness factor $\mathcal{E}_{i,t,k} \in [0, 1]$ is evaluated over four orthogonal behavioral and structural dimensions:
+For each pair $`k`$, a composite evasiveness factor $`\mathcal{E}_{i,t,k} \in [0, 1]`$ is evaluated over four orthogonal behavioral and structural dimensions:
 
-$$\mathcal{E}_{i,t,k} = \text{clip}\left( \mathcal{B}_{\text{semantic}}(q_k, a_k) + \mathcal{P}_{\text{deflect}}(a_k) + \mathcal{P}_{\text{hedge}}(a_k) + \Pi_{\text{elab}}(q_k, a_k) - \mathcal{R}_{\text{metric}}(a_k), \; 0.0, \; 1.0 \right)$$
+```math
+\mathcal{E}_{i,t,k} = \text{clip}\left( \mathcal{B}_{\text{semantic}}(q_k, a_k) + \mathcal{P}_{\text{deflect}}(a_k) + \mathcal{P}_{\text{hedge}}(a_k) + \Pi_{\text{elab}}(q_k, a_k) - \mathcal{R}_{\text{metric}}(a_k), \; 0.0, \; 1.0 \right)
+```
 
-#### 1. Semantic Non-Alignment & Entailment Deficiency $\mathcal{B}_{\text{semantic}}$
-Measures the contextual irrelevance of response $a_k$ relative to prompt $q_k$. When neural cross-encoders are utilized (e.g., DeBERTa-v3-small fine-tuned on natural language inference):
+#### 1. Semantic Non-Alignment & Entailment Deficiency ($`\mathcal{B}_{\text{semantic}}`$)
+Measures the contextual irrelevance of response $`a_k`$ relative to prompt $`q_k`$. When neural cross-encoders are utilized (e.g., DeBERTa-v3-small fine-tuned on natural language inference):
 
-$$\mathcal{S}_{\text{align}}(q_k, a_k) = \sigma\left( \mathbf{w}^\top \Phi_{\text{DeBERTa}}\left( [\text{CLS}] \circ q_k \circ [\text{SEP}] \circ a_k \circ [\text{SEP}] \right) \right)$$
+```math
+\mathcal{S}_{\text{align}}(q_k, a_k) = \sigma\left( \mathbf{w}^\top \Phi_{\text{DeBERTa}}\left( [\text{CLS}] \circ q_k \circ [\text{SEP}] \circ a_k \circ [\text{SEP}] \right) \right)
+```
 
-In high-throughput lexical environments, $\mathcal{S}_{\text{align}}(q_k, a_k)$ defaults to normalized content-token Jaccard overlap over domain vocabulary $\mathcal{V}_{\text{content}} = \mathcal{V} \setminus \mathcal{V}_{\text{stop}}$:
+In high-throughput lexical environments, $`\mathcal{S}_{\text{align}}(q_k, a_k)`$ defaults to normalized content-token Jaccard overlap over domain vocabulary $`\mathcal{V}_{\text{content}} = \mathcal{V} \setminus \mathcal{V}_{\text{stop}}`$:
 
-$$\mathcal{J}(q_k, a_k) = \min\left(1.0, \; \frac{|\mathcal{V}(q_k) \cap \mathcal{V}(a_k)|}{|\mathcal{V}(q_k)|} \cdot 1.5\right)$$
+```math
+\mathcal{J}(q_k, a_k) = \min\left(1.0, \; \frac{|\mathcal{V}(q_k) \cap \mathcal{V}(a_k)|}{|\mathcal{V}(q_k)|} \cdot 1.5\right)
+```
 
 The semantic baseline penalty is scaled as:
 
-$$\mathcal{B}_{\text{semantic}}(q_k, a_k) = \omega_R \cdot \left(1.0 - \mathcal{S}_{\text{align}}(q_k, a_k)\right), \quad \omega_R = 0.45$$
+```math
+\mathcal{B}_{\text{semantic}}(q_k, a_k) = \omega_R \cdot \left(1.0 - \mathcal{S}_{\text{align}}(q_k, a_k)\right), \quad \omega_R = 0.45
+```
 
-#### 2. Explicit Lexical Deflection Penalty $\mathcal{P}_{\text{deflect}}$
-Quantifies direct evasive statements matching calibrated regulatory and institutional evasion lexicons $\mathcal{L}_{\text{deflect}}$ (e.g., disclosure refusals, premature dismissals, prepared remark referrals, offlining):
+#### 2. Explicit Lexical Deflection Penalty ($`\mathcal{P}_{\text{deflect}}`$)
+Quantifies direct evasive statements matching calibrated regulatory and institutional evasion lexicons $`\mathcal{L}_{\text{deflect}}`$ (e.g., disclosure refusals, premature dismissals, prepared remark referrals, offlining):
 
-$$\mathcal{D}(a_k) = \sum_{p \in \mathcal{L}_{\text{deflect}}} \mathbb{I}\left(p \subseteq a_k\right)$$
+```math
+\mathcal{D}(a_k) = \sum_{p \in \mathcal{L}_{\text{deflect}}} \mathbb{I}\left(p \subseteq a_k\right)
+```
 
-$$\mathcal{P}_{\text{deflect}}(a_k) = \min\left(0.50, \; \omega_D \cdot \mathcal{D}(a_k)\right), \quad \omega_D = 0.25$$
+```math
+\mathcal{P}_{\text{deflect}}(a_k) = \min\left(0.50, \; \omega_D \cdot \mathcal{D}(a_k)\right), \quad \omega_D = 0.25
+```
 
-#### 3. Loughran-McDonald Uncertainty & Hedging Penalty $\mathcal{P}_{\text{hedge}}$
-Measures weak modal verbs and conditional qualifiers defined in the financial-domain Loughran-McDonald (LM) Uncertainty Lexicon $\mathcal{L}_{\text{LM}}$:
+#### 3. Loughran-McDonald Uncertainty & Hedging Penalty ($`\mathcal{P}_{\text{hedge}}`$)
+Measures weak modal verbs and conditional qualifiers defined in the financial-domain Loughran-McDonald (LM) Uncertainty Lexicon $`\mathcal{L}_{\text{LM}}`$:
 
-$$\mathcal{U}(a_k) = \frac{1}{|a_k|} \sum_{w \in a_k} \mathbb{I}\left(w \in \mathcal{L}_{\text{LM}}\right)$$
+```math
+\mathcal{U}(a_k) = \frac{1}{|a_k|} \sum_{w \in a_k} \mathbb{I}\left(w \in \mathcal{L}_{\text{LM}}\right)
+```
 
-$$\mathcal{P}_{\text{hedge}}(a_k) = \min\left(0.25, \; \max\left(0.0, \; \left(\mathcal{U}(a_k) - \mu_U\right) \cdot \omega_U\right)\right), \quad \mu_U = 0.03, \; \omega_U = 3.50$$
+```math
+\mathcal{P}_{\text{hedge}}(a_k) = \min\left(0.25, \; \max\left(0.0, \; \left(\mathcal{U}(a_k) - \mu_U\right) \cdot \omega_U\right)\right), \quad \mu_U = 0.03, \; \omega_U = 3.50
+```
 
-#### 4. Numeric Specificity Mitigation $\mathcal{R}_{\text{metric}}$
-Measures hard quantitative disclosure (explicit currency figures, percentage adjustments, basis points, volume guidance) matching pattern $\mathcal{M}_{\text{num}}$:
+#### 4. Numeric Specificity Mitigation ($`\mathcal{R}_{\text{metric}}`$)
+Measures hard quantitative disclosure (explicit currency figures, percentage adjustments, basis points, volume guidance) matching pattern $`\mathcal{M}_{\text{num}}`$:
 
-$$\mathcal{N}(a_k) = \sum_{m \in \mathcal{M}_{\text{num}}} \mathbb{I}\left(m \subseteq a_k\right)$$
+```math
+\mathcal{N}(a_k) = \sum_{m \in \mathcal{M}_{\text{num}}} \mathbb{I}\left(m \subseteq a_k\right)
+```
 
-$$\mathcal{R}_{\text{metric}}(a_k) = \min\left(0.20, \; \omega_N \cdot \mathcal{N}(a_k)\right), \quad \omega_N = 0.04$$
+```math
+\mathcal{R}_{\text{metric}}(a_k) = \min\left(0.20, \; \omega_N \cdot \mathcal{N}(a_k)\right), \quad \omega_N = 0.04
+```
 
-#### 5. Asymmetric Elaboration Penalty $\Pi_{\text{elab}}$
+#### 5. Asymmetric Elaboration Penalty ($`\Pi_{\text{elab}}`$)
 Detects filibustering (diluting non-answers with verbose rhetoric) or abrupt brush-offs:
 
-$$\Pi_{\text{elab}}(q_k, a_k) = \begin{cases} 
+```math
+\Pi_{\text{elab}}(q_k, a_k) = \begin{cases} 
 0.15, & \text{if } |a_k| < 15 \text{ and } |q_k| > 40 \quad (\text{Abrupt Non-Response}) \\
 0.10, & \text{if } \frac{|a_k|}{|q_k|} > 8.0 \text{ and } \mathcal{D}(a_k) > 0 \quad (\text{Filibustering}) \\
 0.00, & \text{otherwise}
-\end{cases}$$
+\end{cases}
+```
 
 ---
 
 ### 2.3 Conference Call Aggregation & Firm-Level Factor
 
-The aggregate call-level evasiveness factor $\bar{\mathcal{E}}_{i,t}$ is computed via length-weighted turn aggregation:
+The aggregate call-level evasiveness factor $`\bar{\mathcal{E}}_{i,t}`$ is computed via length-weighted turn aggregation:
 
-$$\bar{\mathcal{E}}_{i,t} = \sum_{k=1}^{K_{i,t}} \varpi_k \, \mathcal{E}_{i,t,k}, \quad \varpi_k = \frac{|q_k| + |a_k|}{\sum_{j=1}^{K_{i,t}} (|q_j| + |a_j|)}$$
+```math
+\bar{\mathcal{E}}_{i,t} = \sum_{k=1}^{K_{i,t}} \varpi_k \, \mathcal{E}_{i,t,k}, \quad \varpi_k = \frac{|q_k| + |a_k|}{\sum_{j=1}^{K_{i,t}} (|q_j| + |a_j|)}
+```
 
 ---
 
 ### 2.4 Event Study Returns & Conditioning Hypothesis
 
-Abnormal stock returns over event horizon $[\tau_1, \tau_2]$ relative to earnings announcement date $\tau = 0$ are evaluated using Cumulative Abnormal Returns ($\text{CAR}_i$):
+Abnormal stock returns over event horizon $`[\tau_1, \tau_2]`$ relative to earnings announcement date $`\tau = 0`$ are evaluated using Cumulative Abnormal Returns ($`\text{CAR}_i`$):
 
-$$\text{CAR}_i(\tau_1, \tau_2) = \prod_{\tau=\tau_1}^{\tau_2} (1 + R_{i,\tau}) - \prod_{\tau=\tau_1}^{\tau_2} (1 + R_{m,\tau})$$
+```math
+\text{CAR}_i(\tau_1, \tau_2) = \prod_{\tau=\tau_1}^{\tau_2} (1 + R_{i,\tau}) - \prod_{\tau=\tau_1}^{\tau_2} (1 + R_{m,\tau})
+```
 
 or risk-adjusted against the Fama-French 5-Factor + Momentum benchmark:
 
-$$R_{i,\tau} - R_{f,\tau} = \alpha_i + \beta_{i,M}\left(R_{m,\tau} - R_{f,\tau}\right) + \beta_{i,SMB}SMB_\tau + \beta_{i,HML}HML_\tau + \beta_{i,RMW}RMW_\tau + \beta_{i,CMA}CMA_\tau + \beta_{i,MOM}MOM_\tau + \varepsilon_{i,\tau}$$
+```math
+R_{i,\tau} - R_{f,\tau} = \alpha_i + \beta_{i,M}\left(R_{m,\tau} - R_{f,\tau}\right) + \beta_{i,SMB}SMB_\tau + \beta_{i,HML}HML_\tau + \beta_{i,RMW}RMW_\tau + \beta_{i,CMA}CMA_\tau + \beta_{i,MOM}MOM_\tau + \varepsilon_{i,\tau}
+```
 
 #### The Conditional PEAD Interaction Hypothesis
-$$\text{CAR}_i(+2, +60) = \gamma_0 + \gamma_1 \text{SUE}_{i,t} + \gamma_2 \bar{\mathcal{E}}_{i,t} + \gamma_3 \left(\text{SUE}_{i,t} \times \bar{\mathcal{E}}_{i,t}\right) + \mathbf{\Gamma}^\top \mathbf{X}_{i,t} + \varepsilon_{i,t}$$
 
-- **Hypothesis $\gamma_3 < 0$**: For equities with high positive surprise ($\text{SUE} > 0$), high managerial evasiveness ($\bar{\mathcal{E}} > \theta_{\text{high}}$) signals unresolved operational risks, dampening post-announcement drift continuation or causing rapid mean-reversion.
-- **Asymmetric Tail Impact**: When accompanied by negative surprises ($\text{SUE} < 0$), elevated evasiveness accelerates negative drift and exacerbates institutional liquidation cascades.
+```math
+\text{CAR}_i(+2, +60) = \gamma_0 + \gamma_1 \text{SUE}_{i,t} + \gamma_2 \bar{\mathcal{E}}_{i,t} + \gamma_3 \left(\text{SUE}_{i,t} \times \bar{\mathcal{E}}_{i,t}\right) + \mathbf{\Gamma}^\top \mathbf{X}_{i,t} + \varepsilon_{i,t}
+```
+
+- **Hypothesis $`\gamma_3 < 0`$**: For equities with high positive surprise ($`\text{SUE} > 0`$), high managerial evasiveness ($`\bar{\mathcal{E}} > \theta_{\text{high}}`$) signals unresolved operational risks, dampening post-announcement drift continuation or causing rapid mean-reversion.
+- **Asymmetric Tail Impact**: When accompanied by negative surprises ($`\text{SUE} < 0`$), elevated evasiveness accelerates negative drift and exacerbates institutional liquidation cascades.
 
 ---
 
@@ -115,14 +152,18 @@ $$\text{CAR}_i(+2, +60) = \gamma_0 + \gamma_1 \text{SUE}_{i,t} + \gamma_2 \bar{\
 
 Net strategy returns account for institutional microstructural frictions:
 
-$$\mathcal{R}_{\text{net}}(t) = \mathcal{R}_{\text{gross}}(t) - \mathcal{C}_{\text{spread}}(t) - \mathcal{C}_{\text{impact}}(t) - \mathcal{C}_{\text{fees}} - \mathcal{C}_{\text{borrow}}(t)$$
+```math
+\mathcal{R}_{\text{net}}(t) = \mathcal{R}_{\text{gross}}(t) - \mathcal{C}_{\text{spread}}(t) - \mathcal{C}_{\text{impact}}(t) - \mathcal{C}_{\text{fees}} - \mathcal{C}_{\text{borrow}}(t)
+```
 
 where:
-- **Bid-Ask Spread Drag**: $\mathcal{C}_{\text{spread}}(t) = \frac{1}{2} \left(P_{\text{ask}, t} - P_{\text{bid}, t}\right) / P_{\text{mid}, t}$.
+- **Bid-Ask Spread Drag**: $`\mathcal{C}_{\text{spread}}(t) = \frac{1}{2} \left(P_{\text{ask}, t} - P_{\text{bid}, t}\right) / P_{\text{mid}, t}`$.
 - **Almgren-Chriss Square-Root Market Impact**: 
-  $$\mathcal{C}_{\text{impact}}(t) = \kappa_{\text{impact}} \cdot \sigma_i \cdot \sqrt{\frac{V_{\text{order}}}{ADV_{i,t}}}$$
-- **Institutional Venue & Clearing Fees**: $\mathcal{C}_{\text{fees}} = 0.0005$ (\$0.005/share equivalent).
-- **Short Borrow Cost**: $\mathcal{C}_{\text{borrow}}(t) = \lambda_{i,t} \cdot \mathbb{I}(\text{side} = \text{short}) \cdot \frac{\Delta t}{360}$, where $\lambda_{i,t}$ represents annualized locate fees.
+  ```math
+  \mathcal{C}_{\text{impact}}(t) = \kappa_{\text{impact}} \cdot \sigma_i \cdot \sqrt{\frac{V_{\text{order}}}{ADV_{i,t}}}
+  ```
+- **Institutional Venue & Clearing Fees**: $`\mathcal{C}_{\text{fees}} = 0.0005`$ (\$0.005/share equivalent).
+- **Short Borrow Cost**: $`\mathcal{C}_{\text{borrow}}(t) = \lambda_{i,t} \cdot \mathbb{I}(\text{side} = \text{short}) \cdot \frac{\Delta t}{360}`$, where $`\lambda_{i,t}`$ represents annualized locate fees.
 
 ---
 
@@ -188,7 +229,7 @@ flowchart TD
   - **112,397** link historical mappings (`crsp.ccmxpf_lnkhist` with primary link types `LU`, `LC` and link priorities `P`, `C`).
   - Point-in-time resolution guarantees eliminating survivorship bias and ticker reuse.
 - **Linked Event Universe (`earnings_events_linked.parquet`)**: 
-  - **99,715** validated earnings announcements linked to active CRSP PERMNO identifiers during valid announcement intervals (`rdq` $\in [\text{linkdt}, \text{linkenddt}]$).
+  - **99,715** validated earnings announcements linked to active CRSP PERMNO identifiers during valid announcement intervals (`rdq` $`\in [\text{linkdt}, \text{linkenddt}]`$).
 - **CRSP Daily Market Return Corpus (`crsp_daily_returns.parquet`)**: 
   - **7,227,105** daily price, return, volume, and market capitalization observations across **6,147** unique PERMNOs.
   - Date coverage: November 19, 2018 to December 31, 2024.
@@ -259,11 +300,11 @@ Answer snippet:   "Steve, you're correct. We're not going to give a forward look
   - Point-in-time WRDS database connector for Compustat, CRSP, and CCM Linker tables.
   - Multi-tier regex cascade for Q&A section isolation from prepared conference remarks.
   - Continuous-text speaker turn tokenizer resolving multi-analyst and follow-up sequences.
-  - Multi-signal scoring engine ($\mathcal{B}_{\text{semantic}}$, $\mathcal{P}_{\text{deflect}}$, $\mathcal{P}_{\text{hedge}}$, $\mathcal{R}_{\text{metric}}$, $\Pi_{\text{elab}}$).
+  - Multi-signal scoring engine ($`\mathcal{B}_{\text{semantic}}`$, $`\mathcal{P}_{\text{deflect}}`$, $`\mathcal{P}_{\text{hedge}}`$, $`\mathcal{R}_{\text{metric}}`$, $`\Pi_{\text{elab}}`$).
   - High-performance parquet dataset extraction over 11,494 S&P 500 transcripts (216,617 Q&A pairs).
 
 - [x] **Phase 2: Transaction Cost, Fee Drag & Execution Slippage Modeling**
-  - Point-in-time CRSP event study windowing spanning $[-45, +90]$ calendar days.
+  - Point-in-time CRSP event study windowing spanning $`[-45, +90]`$ calendar days.
   - Parametric Almgren-Chriss square-root execution slippage and market impact models.
   - Bid-ask half-spread and institutional clearing fee deduction engine.
   - Hard-to-borrow (HTB) loan fee and short inventory availability constraints.
@@ -271,7 +312,7 @@ Answer snippet:   "Steve, you're correct. We're not going to give a forward look
 
 - [ ] **Phase 3: Real-Time Stream Ingestion & Microsecond Latency Profiling**
   - Low-latency WebSocket audio and speech-to-text (STT) stream ingestion for live earnings calls.
-  - Streaming turn tokenization pipeline operating under $<500\text{ ms}$ processing latency.
+  - Streaming turn tokenization pipeline operating under $`< 500\text{ ms}`$ processing latency.
   - GPU-accelerated DeBERTa-v3 TensorRT inference for real-time semantic entailment calculation.
   - Dynamic event signal generation executing prior to call termination and market close.
 
@@ -447,10 +488,10 @@ python3 search_transcripts.py --ticker MSFT --year 2023 --quarter 1 --export msf
 | `crsp_lag_buffer` | `90` days | `p1.py` | Post-announcement return buffer for long-horizon PEAD drift evaluation. |
 | `min_offset` | `1500` chars | `qa_extractor.py` | Minimum character threshold to bypass opening legal safe-harbor disclaimers. |
 | `min_words` | `3` words | `qa_extractor.py` | Minimum token count required for both question and answer turns. |
-| `omega_R` | `0.45` | `scoring_engine.py` | Maximum weight assigned to semantic non-alignment penalty $\mathcal{B}_{\text{semantic}}$. |
+| `omega_R` | `0.45` | `scoring_engine.py` | Maximum weight assigned to semantic non-alignment penalty $`\mathcal{B}_{\text{semantic}}`$. |
 | `omega_D` | `0.25` | `scoring_engine.py` | Deflection match penalty scaling factor (capped at `0.50`). |
-| `mu_U` | `0.03` | `scoring_engine.py` | Neutral baseline density for Loughran-McDonald uncertainty modals. |
-| `omega_U` | `3.50` | `scoring_engine.py` | Multiplier for uncertainty density exceeding baseline $\mu_U$ (capped at `0.25`). |
+| `mu_U` | `0.03` | `scoring_engine.py` | Neutral baseline density for Loughran-McDonald uncertainty modals $`\mu_U`$. |
+| `omega_U` | `3.50` | `scoring_engine.py` | Multiplier for uncertainty density exceeding baseline $`\mu_U`$ (capped at `0.25`). |
 | `omega_N` | `0.04` | `scoring_engine.py` | Bonus scaling factor for verified numeric metric disclosures (capped at `0.20`). |
 
 ---
