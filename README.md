@@ -163,45 +163,26 @@ where:
 
 ## 3. Pipeline Architecture
 
-The system is constructed as a decoupled, modular analytics pipeline operating from point-in-time raw ingestion through dialogue extraction, NLP vectorization, factor construction, and risk-adjusted backtesting.
+The system is constructed as a decoupled, modular quantitative research pipeline operating from point-in-time data acquisition through conversational turn extraction, NLP vectorization, factor calibration, and execution-adjusted backtest simulation.
 
 ```mermaid
-flowchart TD
-    subgraph DataIngestion["1. Point-in-Time Data Ingestion & Linking"]
-        A1["Compustat Quarterly Fundamentals<br/>(comp.fundq: 180,821 records)"] --> B1["CCM Linker Engine<br/>(crsp.ccmxpf_lnkhist: 112,397 mappings)"]
-        A2["CRSP Daily Stock File<br/>(crsp.dsf: 7,227,105 observations)"] --> B1
-        A3["Academic S&P 500 Transcripts<br/>(11,494 complete calls: 2019–2024)"] --> B2["Temporal Alignment & Ticker Matching"]
-        B1 --> C1["Survior-Bias-Free Linked Universe<br/>(earnings_events_linked: 99,715 events)"]
-        B2 --> C1
-    end
-
-    subgraph NLPExtraction["2. Conversational Turn Extraction Engine"]
-        C1 --> D1["Full Transcript Normalizer<br/>(qa_extractor.py: isolate_qa_section)"]
-        D1 --> D2["Ranked Transition Regex Cascade<br/>(Operator cues / Executive handoffs)"]
-        D2 --> D3["Speaker Turn Tokenizer<br/>(tokenize_speakers: Zero-newline parsing)"]
-        D3 --> D4["Dialogue Pairing State Machine<br/>(extract_qa_pairs: Analyst vs Management)"]
-        D4 --> D5["Tabular Q&A Corpus<br/>(qa_pairs.parquet: 216,617 pairs)"]
-    end
-
-    subgraph ScoringEngine["3. Multi-Signal Evasiveness Factor Engine"]
-        D5 --> E1["Lexical Deflection Filter<br/>(DEFLECTION_PATTERNS)"]
-        D5 --> E2["Loughran-McDonald Uncertainty<br/>(LM_UNCERTAINTY_WORDS)"]
-        D5 --> E3["Numeric Specificity Extractor<br/>(NUMERIC_FINANCIAL_PATTERN)"]
-        D5 --> E4["Semantic Entailment Engine<br/>(DeBERTa-v3 / Lexical Jaccard)"]
-        E1 & E2 & E3 & E4 --> E5["Calibrated Composite Scorer<br/>(scoring_engine.py: E_pair in [0, 1])"]
-        E5 --> E6["Call-Level Length-Weighted Factor<br/>(E_bar in [0, 1])"]
-    end
-
-    subgraph SimulationEngine["4. Backtest & Portfolio Validation Engine"]
-        E6 --> F1["Event Study Windowing<br/>([-20, +60] Trading Days)"]
-        C1 --> F1
-        F1 --> F2["Conditional PEAD Sorts<br/>(SUE Quintiles x Evasiveness Tertiles)"]
-        F2 --> F3["Execution Friction Modeling<br/>(Spread, Slippage, Borrow, Fees)"]
-        F3 --> F4["Performance & Risk Attribution<br/>(Sharpe, Information Ratio, Drawdowns)"]
-    end
+flowchart LR
+    A["<b>1. Ingestion & Linking</b><br/>• Compustat Quarterly (180.8k)<br/>• CRSP Daily Stock File (7.2M)<br/>• CCM Historical Linker (112.4k)<br/>• Survivor-Bias-Free Linking"]
+    --> B["<b>2. Dialogue Extraction</b><br/>• 11.5k S&P 500 Transcripts<br/>• Ranked Regex Section Slicer<br/>• Lookbehind Turn Tokenizer<br/>• 216.6k Structured Q&A Pairs"]
+    --> C["<b>3. Evasion Factor Engine</b><br/>• Lexical Deflection Filter<br/>• LM Uncertainty Density<br/>• Numeric Guidance Specificity<br/>• DeBERTa-v3 Semantic Alignment"]
+    --> D["<b>4. Execution & PEAD Sim</b><br/>• SUE x Evasion Factor Sorts<br/>• Event Horizon [-20, +60]<br/>• Square-Root Market Impact<br/>• Net Alpha & Risk Attribution"]
 ```
 
-### Module Breakdown
+### 3.1 Architectural Pipeline Stages
+
+| Pipeline Stage | Engine / Script | Input Data & Sources | Processing & Transformations | Output Artifact & Scale |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Data Ingestion & Linking** | `p1.py` | WRDS (`comp.fundq`, `crsp.dsf`, `crsp.ccmxpf_lnkhist`), S&P 500 Transcripts | Point-in-time PERMNO-GVKEY resolution, announcement date link windowing, return lead/lag buffering | `compustat_fundq` (180.8k records)<br/>`crsp_daily_returns` (7.2M rows)<br/>`earnings_events_linked` (99.7k events) |
+| **2. Conversational Segmentation** | `qa_extractor.py`<br/>`extract_dataset.py` | `transcripts.parquet`<br/>(11,494 complete calls) | 4-tier ranked regex transition cascade, zero-newline speaker turn tokenization, analyst-executive pairing state machine | `qa_pairs.parquet`<br/>(216,617 dialogue pairs, Snappy Parquet, 168.9 MB) |
+| **3. Multi-Signal Factor Engine** | `scoring_engine.py` | `qa_pairs.parquet` | Deflection dictionary scanning, Loughran-McDonald uncertainty density, regex financial figure detection, DeBERTa-v3 cross-encoder alignment | Pair score E_pair in [0, 1]<br/>Call factor E_bar in [0, 1] |
+| **4. Simulation & Validation** | Backtest & Simulation Engine | `earnings_events_linked`<br/>`crsp_daily_returns` | Bivariate quintile/tertile portfolio sorts, Cumulative Abnormal Returns (CAR), Almgren-Chriss market impact, short borrow fees | Net strategy Sharpe, Information Ratio, Fama-French 5F + MOM attribution |
+
+### 3.2 Modular Component Breakdown
 
 | Module | Source File | Core Responsibilities |
 | :--- | :--- | :--- |
